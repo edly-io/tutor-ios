@@ -1,0 +1,12 @@
+# Delete obsolete credentials for the iOS application
+./manage.py lms shell -c 'from oauth2_provider.models import get_application_model
+get_application_model().objects.filter(name="{{ IOS_OAUTH_CLIENT_ID }}").exclude(user__username="login_service_user").delete()'
+# Create oauth credentials for the iOS application
+./manage.py lms create_dot_application \
+    --client-id {{ IOS_OAUTH_CLIENT_ID }} \
+    --client-secret {{ IOS_OAUTH2_SECRET }} \
+    --grant-type password \
+    --public \
+    --update \
+    {{ IOS_OAUTH_CLIENT_ID }} \
+    login_service_user

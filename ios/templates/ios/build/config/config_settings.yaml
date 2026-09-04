@@ -1,0 +1,8 @@
+# Tells the Open edX iOS app where to find its environment configuration.
+# `config_directory` is resolved relative to the root of the openedx-app-ios
+# checkout, which is where config_script/process_config.py is executed from.
+config_directory: './tutor_config'
+config_mapping:
+  prod: 'prod'
+  stage: 'prod'
+  dev: 'prod'

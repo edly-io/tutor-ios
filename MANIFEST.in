@@ -1,0 +1,2 @@
+recursive-include ios/patches *
+recursive-include ios/templates *
