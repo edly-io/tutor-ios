@@ -1,0 +1,5 @@
+# Lists the config files that process_config.py merges, in order, to produce
+# the app's config.plist. Later files override earlier ones.
+ios:
+    files:
+      - config.yaml
