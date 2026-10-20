@@ -28,7 +28,7 @@ classifiers = [
 
 ]
 dependencies = [
-    "tutor>=22.0.0,<23.0.0",
+    "tutor>=23.0.dev0,<24.0.0",
     "importlib_resources",
 ]
 
@@ -37,7 +37,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "tutor[dev]>=22.0.0,<23.0.0",
+    "tutor[dev]>=23.0.dev0,<24.0.0",
     "ruff",
     "pytest",
     "scriv",
