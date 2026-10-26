@@ -72,8 +72,16 @@ class PluginTestCase(unittest.TestCase):
         self.addCleanup(self._root_context.cleanup)
 
     def get_config(self, **overrides: t.Any) -> Config:
-        config = tutor_config.load_full(self.root)
+        """
+        Load the configuration with overrides applied as user settings, as
+        "tutor config save --set" does, so that defaults built from other
+        settings (e.g. IOS_API_HOST_URL from LMS_HOST) follow them.
+        """
+        config = tutor_config.get_user(self.root)
         config.update(overrides)
+        tutor_config.update_with_base(config)
+        tutor_config.update_with_defaults(config)
+        tutor_config.render_full(config)
         return config
 
     def render(self, config: Config, path: str) -> str:
@@ -152,6 +160,15 @@ class AppConfigTests(PluginTestCase):
             LMS_HOST="courses.example.com", ENABLE_HTTPS=True
         )
         self.assertEqual("https://courses.example.com", parsed["API_HOST_URL"])
+
+    def test_api_host_can_be_overridden(self) -> None:
+        """
+        The app can reach the LMS at another address; SSO URLs must follow.
+        """
+        parsed = self.render_app_config(IOS_API_HOST_URL="http://local.openedx.io:8000")
+        self.assertEqual("http://local.openedx.io:8000", parsed["API_HOST_URL"])
+        self.assertEqual("http://local.openedx.io:8000", parsed["SSO_URL"])
+        self.assertEqual("http://local.openedx.io:8000", parsed["SSO_FINISHED_URL"])
 
     def test_nested_groups_are_nested(self) -> None:
         """
@@ -276,13 +293,15 @@ class WhitelabelTests(PluginTestCase):
         self.assertIsInstance(project["current_project_version"], str)
         self.assertEqual("2.5.1", project["marketing_version"])
 
-    def test_dev_team_is_omitted_when_unset(self) -> None:
+    def test_dev_team_is_empty_when_unset(self) -> None:
         """
-        whitelabel.py logs an error for an empty dev_team, so omit the key.
+        whitelabel.py logs two errors when dev_team or project_extra_targets is
+        missing, but only one, and changes nothing, for an empty dev_team and an
+        empty target list.
         """
         parsed = self.render_whitelabel(IOS_DEV_TEAM="")
-        self.assertNotIn("dev_team", parsed["project_config"])
-        self.assertNotIn("project_extra_targets", parsed["project_config"])
+        self.assertEqual("", parsed["project_config"]["dev_team"])
+        self.assertEqual([], parsed["project_config"]["project_extra_targets"])
 
     def test_dev_team_brings_extra_targets(self) -> None:
         """
@@ -459,6 +478,15 @@ class SetupScriptTests(PluginTestCase):
         self.assertIn("tutor_config", rendered)
         # default_config belongs to the app; we must not overwrite it.
         self.assertNotIn('rm -rf "$APP_DIR/default_config"', rendered)
+
+    def test_script_runs_whitelabel_with_tutor_python(self) -> None:
+        """
+        whitelabel.py needs packages installed alongside Tutor, so the script must
+        use the interpreter that "tutor ios setup" passes in.
+        """
+        rendered = self.render(self.get_config(), "ios/build/setup.sh")
+        self.assertIn('PYTHON="${TUTOR_IOS_PYTHON:-python3}"', rendered)
+        self.assertIn('"$PYTHON" config_script/whitelabel.py', rendered)
 
 
 if __name__ == "__main__":

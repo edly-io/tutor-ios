@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import typing as t
 from glob import glob
 
@@ -36,9 +37,11 @@ config: t.Dict[str, t.Dict[str, t.Any]] = {
         "FAQ_URL": "",
         "URI_SCHEME": "",
         "APP_STORE_ID": "",
+        # LMS the app talks to, when it differs from the LMS's own URL.
+        "API_HOST_URL": '{{ "https" if ENABLE_HTTPS else "http" }}://{{ LMS_HOST }}',
         # Single sign-on
-        "SSO_URL": '{{ "https" if ENABLE_HTTPS else "http" }}://{{ LMS_HOST }}',
-        "SSO_FINISHED_URL": '{{ "https" if ENABLE_HTTPS else "http" }}://{{ LMS_HOST }}',  # noqa: E501
+        "SSO_URL": "{{ IOS_API_HOST_URL }}",
+        "SSO_FINISHED_URL": "{{ IOS_API_HOST_URL }}",
         "SSO_BUTTON_TITLE": {"en": "Sign in with SSO"},
         # Agreement URLs (leave empty to hide the corresponding setting)
         "PRIVACY_POLICY_URL": "",
@@ -223,6 +226,7 @@ CHOICES: dict[str, tuple[str, ...]] = {
 # Settings that must be a URL when set, so a missing scheme is caught early.
 # Config.swift discards a value that URL(string:) cannot parse.
 URL_SETTINGS = (
+    "IOS_API_HOST_URL",
     "IOS_SSO_URL",
     "IOS_SSO_FINISHED_URL",
     "IOS_FAQ_URL",
@@ -304,6 +308,25 @@ def _build_dir(context: t.Any) -> str:
     return os.path.join(context.root, "env", "plugins", "ios", "build")
 
 
+def _run_setup_script(context: t.Any, app_directory: str) -> None:
+    """
+    Run the rendered setup.sh against an app checkout.
+
+    The script runs the app's whitelabel.py with the Python interpreter that runs
+    Tutor, whose environment already holds the packages that script imports.
+    """
+    script = os.path.join(_build_dir(context), "setup.sh")
+    if not os.path.exists(script):
+        raise click.ClickException(
+            f"{script} does not exist. Run 'tutor config save' first."
+        )
+    subprocess.run(
+        ["bash", script, app_directory],
+        check=True,
+        env={**os.environ, "TUTOR_IOS_PYTHON": sys.executable},
+    )
+
+
 @click.group(name="ios", help="Configure and build the Open edX iOS application")
 def ios_command() -> None:
     pass
@@ -330,12 +353,7 @@ def setup(context: t.Any, app_directory: str) -> None:
 
     APP_DIRECTORY is the path to your clone of the Open edX iOS app repository.
     """
-    script = os.path.join(_build_dir(context), "setup.sh")
-    if not os.path.exists(script):
-        raise click.ClickException(
-            f"{script} does not exist. Run 'tutor config save' first."
-        )
-    subprocess.run(["bash", script, app_directory], check=True)
+    _run_setup_script(context, app_directory)
 
 
 @ios_command.command(name="clone")
@@ -378,10 +396,7 @@ def clone(context: t.Any, app_directory: str) -> None:
         ],
         check=True,
     )
-    subprocess.run(
-        ["bash", os.path.join(_build_dir(context), "setup.sh"), app_directory],
-        check=True,
-    )
+    _run_setup_script(context, app_directory)
 
 
 tutor_hooks.Filters.CLI_COMMANDS.add_item(ios_command)

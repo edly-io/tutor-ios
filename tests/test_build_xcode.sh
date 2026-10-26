@@ -97,7 +97,7 @@ Re-run with --build to compile the app for the simulator, or build manually:
 
     cd $APP_DIR
     pod install
-    open OpenEdX.xcworkspace
+    open -a Xcode OpenEdX.xcworkspace
 
 EOF
     exit 0

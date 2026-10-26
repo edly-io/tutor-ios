@@ -3,7 +3,7 @@
 # This file is merged by config_script/process_config.py into the app's
 # config.plist at build time. The keys below mirror those read by
 # Core/Core/Configuration/Config/*.swift in openedx-app-ios.
-API_HOST_URL: "{{ "https" if ENABLE_HTTPS else "http" }}://{{ LMS_HOST }}"
+API_HOST_URL: "{{ IOS_API_HOST_URL }}"
 SSO_URL: "{{ IOS_SSO_URL }}"
 SSO_FINISHED_URL: "{{ IOS_SSO_FINISHED_URL }}"
 ENVIRONMENT_DISPLAY_NAME: "{{ IOS_ENVIRONMENT_DISPLAY_NAME }}"

@@ -42,28 +42,31 @@ cp "$CONFIG_DIR/config_settings.yaml" "$APP_DIR/config_settings.yaml"
 
 # Apply app identity (bundle ID, name, version, colours) via the app's own
 # white-labelling script, which rewrites the Xcode project in place.
+# "tutor ios setup" sets TUTOR_IOS_PYTHON to the interpreter that runs Tutor, so
+# the script finds the packages installed alongside this plugin.
+PYTHON="${TUTOR_IOS_PYTHON:-python3}"
 cp "$CONFIG_DIR/whitelabel.yaml" "$APP_DIR/whitelabel.yaml"
-if command -v python3 >/dev/null 2>&1; then
+if command -v "$PYTHON" >/dev/null 2>&1; then
     echo "Applying app identity with the app's whitelabel script ..."
-    if ! (cd "$APP_DIR" && python3 config_script/whitelabel.py --config-file whitelabel.yaml); then
+    if ! (cd "$APP_DIR" && "$PYTHON" config_script/whitelabel.py --config-file whitelabel.yaml); then
         echo
         echo "Warning: whitelabel.py failed. The app configuration is installed and" >&2
         echo "usable, but the bundle ID, app name and colours were not applied." >&2
-        echo "It needs PyYAML, Pillow and coloredlogs; install them with:" >&2
-        echo "  pip install pyyaml pillow coloredlogs" >&2
-        echo "Then re-run: cd $APP_DIR && python3 config_script/whitelabel.py --config-file whitelabel.yaml" >&2
+        echo "If a Python module is missing above, install the script's packages:" >&2
+        echo "  $PYTHON -m pip install pyyaml pillow coloredlogs" >&2
+        echo "then run this script again." >&2
     fi
 else
-    echo "Warning: python3 not found, skipping the whitelabel step." >&2
+    echo "Warning: $PYTHON not found, skipping the whitelabel step." >&2
 fi
 
 echo
-echo "Done. The app is now configured for {{ LMS_HOST }}."
+echo "Done. The app is now configured for {{ IOS_API_HOST_URL }}."
 echo
 echo "Next steps, on a macOS machine with Xcode installed:"
 echo
 echo "  cd $APP_DIR"
 echo "  pod install"
-echo "  open OpenEdX.xcworkspace"
+echo "  open -a Xcode OpenEdX.xcworkspace"
 echo
 echo "Then select the 'OpenEdXProd' scheme and press Run."

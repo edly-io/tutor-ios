@@ -42,14 +42,19 @@ tutor ios setup "$APP_DIR" >/dev/null
 [ -f "$APP_DIR/config_settings.yaml" ] || fail "config_settings.yaml was not installed"
 [ -f "$APP_DIR/tutor_config/prod/config.yaml" ] || fail "config.yaml was not installed"
 
-# The app must be left untouched apart from the files we own, so that a user's
-# checkout stays clean and upgradable.
+# The app must be left untouched apart from the files we own and the Xcode
+# project that the app's own whitelabel.py rewrites, so that a user's checkout
+# stays clean and upgradable.
 log "Checking the app checkout is otherwise unmodified"
-UNEXPECTED="$(cd "$APP_DIR" && git status --porcelain | grep -v 'config_settings.yaml' | grep -v 'tutor_config' || true)"
+UNEXPECTED="$(cd "$APP_DIR" && git status --porcelain \
+    | grep -v 'config_settings.yaml' \
+    | grep -v 'tutor_config' \
+    | grep -v 'whitelabel.yaml' \
+    | grep -v 'OpenEdX.xcodeproj/project.pbxproj' || true)"
 if [ -n "$UNEXPECTED" ]; then
     fail "the plugin modified files it does not own:"$'\n'"$UNEXPECTED"
 fi
-echo "Only config_settings.yaml and tutor_config/ were touched."
+echo "Only config_settings.yaml, tutor_config/, whitelabel.yaml and project.pbxproj were touched."
 
 # Run the app's own config script the way the Xcode build phase does, for every
 # scheme, so a broken config_mapping is caught.
@@ -101,6 +106,6 @@ To compile the app, on a Mac with Xcode:
 
     cd $APP_DIR
     pod install
-    open OpenEdX.xcworkspace
+    open -a Xcode OpenEdX.xcworkspace
 
 EOF

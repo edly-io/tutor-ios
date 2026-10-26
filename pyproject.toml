@@ -30,6 +30,11 @@ classifiers = [
 dependencies = [
     "tutor>=22.0.0,<23.0.0",
     "importlib_resources",
+    # Imported by the app's config_script/whitelabel.py, which "tutor ios setup"
+    # runs with the same Python interpreter as Tutor.
+    "coloredlogs",
+    "pillow",
+    "pyyaml",
 ]
 
 # These fields will be set by hatch_build.py

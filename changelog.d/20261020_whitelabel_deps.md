@@ -1,0 +1,4 @@
+- [Bugfix] Install `pyyaml`, `pillow` and `coloredlogs` with the plugin and run the app's `whitelabel.py` with Tutor's own Python interpreter, so `tutor ios setup` applies the app identity without any manual `pip install`. (by @Faraz32123)
+- [Bugfix] Allow `whitelabel.yaml` and `project.pbxproj` in the `make test-build-config` "unmodified checkout" check, since the whitelabel step writes them by design. (by @Faraz32123)
+- [Feature] Add an `IOS_API_HOST_URL` setting for when the app must reach the LMS at an address other than its own URL. `IOS_SSO_URL` and `IOS_SSO_FINISHED_URL` now default to it. (by @Faraz32123)
+- [Improvement] Document running the app against a remote HTTPS platform by copying the generated `build` folder to the Mac, and that the app blocks plain-HTTP platforms. (by @Faraz32123)
