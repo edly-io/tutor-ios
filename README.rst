@@ -185,9 +185,66 @@ Developer account because simulator builds are not code-signed:
 
     ./tests/test_build_xcode.sh ~/openedx-app-ios --build
 
-Note that iOS App Transport Security blocks plaintext HTTP by default, so an
-``http://`` ``LMS_HOST`` may fail to connect from a simulator or device even
-though the app builds. Run your platform over HTTPS to test sign-in.
+Running the app in the simulator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To sign in from the app you need a platform served over **HTTPS** with a valid
+certificate, such as a dev or staging server. The app blocks plain HTTP: its
+``Info.plist`` sets ``NSAllowsArbitraryLoadsInWebContent``, and when that key is
+present iOS ignores ``NSAllowsArbitraryLoads``. A local ``http://local.openedx.io``
+platform therefore can't be used for sign-in, although the app still builds and
+launches against it.
+
+Tutor and Xcode usually run on different machines. Tutor generates everything the
+app needs in one folder, so you can copy it to the Mac.
+
+On the server:
+
+.. code-block:: bash
+
+    tutor plugins enable ios
+    tutor config save
+    tutor local do init --limit=ios       # creates the app's OAuth2 client
+    tutor ios printconfigdir              # the generated folder is its parent, "build"
+    tutor config printvalue IOS_APP_VERSION
+
+Copy that ``build`` folder to the Mac. It contains no secrets. Then, on the Mac:
+
+1. Install Xcode 26 (see `Requirements`_), open it once and download the **iOS**
+   platform from Settings → Components. Install CocoaPods and the packages the
+   app's white-labelling script needs:
+
+   .. code-block:: bash
+
+       brew install cocoapods
+       pip3 install pyyaml pillow coloredlogs
+
+2. Clone the app at the branch printed above, and apply the configuration:
+
+   .. code-block:: bash
+
+       git clone --branch <IOS_APP_VERSION> https://github.com/openedx/openedx-app-ios
+       bash build/setup.sh openedx-app-ios
+
+   If Tutor runs on the Mac itself, ``tutor ios clone ~/openedx-app-ios`` does both.
+
+3. Install the app's dependencies and open it:
+
+   .. code-block:: bash
+
+       cd openedx-app-ios
+       pod install
+       open -a Xcode OpenEdX.xcworkspace
+
+4. Pick the ``OpenEdXProd`` scheme and an iPhone simulator (not "Any iOS Device"),
+   then press Run. If the build stops with *Plugin "SwiftLintBuildToolPlugin" ...
+   must be enabled*, click the error, choose **Trust & Enable** and run again.
+
+5. Sign in with a user from your platform, and check that your mobile courses
+   appear (see `Making courses visible in the app`_).
+
+Whenever you change an ``IOS_*`` setting, run ``tutor config save`` again, copy the
+folder again, re-run ``setup.sh`` and rebuild.
 
 Making courses visible in the app
 ---------------------------------
@@ -213,8 +270,8 @@ them with ``tutor config save --set <KEY>=<VALUE>``. For example, to enable Fire
 
 The available settings are:
 
-- **General**: ``IOS_ENVIRONMENT_DISPLAY_NAME``, ``IOS_ORGANIZATION_CODE``,
-  ``IOS_FEEDBACK_EMAIL_ADDRESS``, ``IOS_OAUTH_CLIENT_ID``, ``IOS_TOKEN_TYPE`` (``JWT`` or
+- **General**: ``IOS_API_HOST_URL`` (defaults to your LMS URL),
+  ``IOS_ENVIRONMENT_DISPLAY_NAME``, ``IOS_ORGANIZATION_CODE``, ``IOS_FEEDBACK_EMAIL_ADDRESS``, ``IOS_OAUTH_CLIENT_ID``, ``IOS_TOKEN_TYPE`` (``JWT`` or
   ``BEARER``), ``IOS_FAQ_URL``, ``IOS_URI_SCHEME``, ``IOS_APP_STORE_ID``.
 - **Single sign-on**: ``IOS_SSO_URL``, ``IOS_SSO_FINISHED_URL``,
   ``IOS_SSO_BUTTON_TITLE`` (a mapping of language code to button label).
@@ -297,6 +354,8 @@ project and asset catalogue in place. This plugin generates its configuration to
   last, so bump ``IOS_BUILD_NUMBER`` for each submission.
 - ``IOS_DEV_TEAM`` — your Apple Developer team ID, needed to archive and upload. When
   set, it is also applied to each sub-project listed in ``IOS_EXTRA_TARGETS``.
+  Until it is set, ``tutor ios setup`` prints ``ERROR 'dev_team' is empty in config``
+  from the app's script. That is harmless: simulator builds need no team.
 
 Colours are set per asset name, either as one hex value or as separate light and dark
 values. Because these are YAML values, use a configuration file rather than ``--set``:
@@ -326,10 +385,12 @@ Images, the app icon and a custom font need files on the build machine. Point
       regular: Brand-Regular
       bold: Brand-Bold
 
-The white-labelling step needs a few Python packages that the app's script imports
-(``pyyaml``, ``pillow``, ``coloredlogs``). If they are missing, ``tutor ios setup``
-warns and skips this step: your app configuration is still installed and usable, only
-the identity and branding are left at the app's defaults.
+The app's white-labelling script imports a few Python packages (``pyyaml``,
+``pillow``, ``coloredlogs``). They are installed with this plugin, and
+``tutor ios setup`` runs the script with the same Python interpreter as Tutor, so no
+extra step is needed. If the script fails anyway, ``tutor ios setup`` warns and carries
+on: your app configuration is still installed and usable, only the identity and
+branding are left at the app's defaults.
 
 Unlike ``config.yaml``, these changes are written into the checkout itself rather than
 read at build time. Re-running ``tutor ios setup`` is safe and idempotent. For settings
@@ -368,9 +429,9 @@ therefore:
     # 3. Rebuild, then ship a new version through TestFlight or the App Store
 
 Point ``API_HOST_URL`` at your production LMS by setting ``LMS_HOST`` and enabling
-``ENABLE_HTTPS``, which this plugin follows automatically. Serving your platform over
-HTTPS is mandatory in production, for the App Transport Security reason noted under
-`Testing the build`_.
+``ENABLE_HTTPS``, which this plugin follows automatically. Leave ``IOS_API_HOST_URL``
+at its default unless the app must reach the LMS at a different address. HTTPS is
+required, for the reason given under `Running the app in the simulator`_.
 
 Set ``IOS_APP_STORE_ID`` once you have an App Store listing, so the app's
 "rate this app" and upgrade prompts link to the right place.
@@ -405,7 +466,7 @@ mistakes before involving Xcode at all.
 
     cd ~/openedx-app-ios
     pod install
-    open OpenEdX.xcworkspace
+    open -a Xcode OpenEdX.xcworkspace
 
 Select the ``OpenEdXProd`` scheme and press Run. Sign in with a real account on your
 platform and confirm your courses appear. This step needs no Apple Developer account.
