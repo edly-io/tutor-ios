@@ -1,0 +1,1 @@
+- [Documentation] Shorten the README and make it more accurate: a compatibility table, the server-to-Mac steps, a virtualenv for the branding script's packages, Kubernetes init, a settings defaults table and a troubleshooting list. (by @Faraz32123)
